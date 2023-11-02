@@ -27,8 +27,10 @@ while True:
 
     mask = cv.inRange(blur_frame, lower_blue, upper_blue)
 
+    edges = cv.Canny(blur_frame,100, 200) 
+
 #    contours, _ = cv.findContours(edges, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    contours, hierarchy = cv.findContours(image=mask, mode=cv.RETR_EXTERNAL, method=cv.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv.findContours(image=edges, mode=cv.RETR_EXTERNAL, method=cv.CHAIN_APPROX_NONE)
 
     for contour in contours:
         min_contour_area = 10 # Passen Sie diesen Wert an
@@ -36,6 +38,8 @@ while True:
         if cv.contourArea(contour) > min_contour_area:
             x, y, w, h = cv.boundingRect(contour)
             objects.append((x, y, w, h))
+    
+    print(objects[0])
 
     if len(objects) > 0:
         for x, y, w, h in objects:
