@@ -30,7 +30,7 @@ while True:
     edges = cv.Canny(blur_frame,100, 200) 
 
 #    contours, _ = cv.findContours(edges, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    contours, hierarchy = cv.findContours(image=edges, mode=cv.RETR_EXTERNAL, method=cv.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv.findContours(image=mask, mode=cv.RETR_EXTERNAL, method=cv.CHAIN_APPROX_NONE)
 
     for contour in contours:
         min_contour_area = 10 # Passen Sie diesen Wert an

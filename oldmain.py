@@ -2,7 +2,6 @@ import cv2 as cv
 import numpy as np
 import sys
 from matplotlib import pyplot as plt
-import classifyObjects as co
 
 
 capture = cv.VideoCapture(0)
@@ -18,7 +17,6 @@ while True:
         print(f"no frame availabe", file = sys.stderr)
         break
 
-    cv.imshow("blueObjects", blueLegos) 
     hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
     gray_frame = cv.cvtColor(hsv, cv.COLOR_BGR2GRAY)
     blur_frame = cv.GaussianBlur(gray_frame, (3,3), 0)
