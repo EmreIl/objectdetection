@@ -1,97 +1,101 @@
-import cv2 as cv 
+import cv2 as cv
 import numpy as np
-import sys
-from matplotlib import pyplot as plt
-from keras.models import load_model
-import os
 import tensorflow as tf
 
-model_path = "/home/emre/Projekte/objectdetection/data/test/model.savedmodel"
+model_path = "/home/emre/Projekte/objectdetection/data/test/keras/keras_model.h5"
+model = tf.keras.models.load_model(model_path)
 
-# For detection2 method 
-#model = tf.saved_model.load(model_path)
+lable_path = "/home/emre/Projekte/objectdetection/data/test/keras/labels.txt"
+with open(lable_path, "r") as file:
+    labels = file.read().strip().split('\n')
 
-# For detection method
-model = load_model(model_path)
+confidence_threshold = 0.6 
 
+def detection(frame, objects):
+    offset = 10  
+    roi = frame
+    if len(objects) != 0:
+        
+        x,y,w,h = objects
+        x -= offset
+        y -= offset
+        w += 2 * offset
+        h += 2 * offset
+        roi = frame[y:y+h, x:x+w]
+    cv.imshow('ROI', roi)
 
-lable_path = "/home/emre/Projekte/objectdetection/data/test/labels.txt"
-with open(lable_path, 'r') as f:
-    labels = f.read().strip().split('\n')
+    
+    if roi is not None and roi.any():
+        input_image = cv.resize(roi, (224, 224))
+        input_image = input_image / 255.0  # Normalize the input image
 
-capture = cv.VideoCapture(0)
+        # Perform object detection
+        predictions = model.predict(np.expand_dims(input_image, axis=0))[0]
+        for i, confidence in enumerate(predictions):
+            if confidence > confidence_threshold:
+                class_label = labels[i]
+                text = f"{class_label}: {confidence:.2f}"
+                cv.putText(frame, text, (10, 30 * i + 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-if not capture.isOpened():
-    print(f"cannont open camera", file = sys.stderr)
-    sys.exit(10)
-
-def detection2(image):
-    input_tensor = cv.GaussianBlur(image, (3,3), 0)
-    input_tensor = tf.convert_to_tensor(image, dtype=tf.uint8)
-    input_tensor = tf.image.resize(input_tensor, (224, 224))
-    input_tensor = tf.expand_dims(input_tensor, axis=0)  # Add a batch dimension
-    input_tensor = tf.cast(input_tensor, tf.float32)
-    return model(input_tensor)
-
-def detection(image):
-#    image = cv.GaussianBlur(image, (3,3), 0)
-    image = cv.resize(image, (224,224), interpolation=cv.INTER_AREA)
-    frame_array = np.asarray(image, dtype=np.float32).reshape(1, 224, 224, 3)
-    frame_array = (frame_array / 127.5) -1
-    return model.predict(frame_array)
+        cv.imshow('Detected Objects', frame)
 
 def getContours(frame):
     objects = []
 
-    hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
-    gray_frame = cv.cvtColor(hsv, cv.COLOR_BGR2GRAY)
+#    hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
+    gray_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     blur_frame = cv.GaussianBlur(gray_frame, (3,3), 0)
     edges = cv.Canny(blur_frame,100, 200) 
 
 #    contours, _ = cv.findContours(edges, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    contours, hierarchy = cv.findContours(image=edges, mode=cv.RETR_TREE, method=cv.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv.findContours(image=edges, mode=cv.RETR_EXTERNAL, method=cv.CHAIN_APPROX_TC89_L1)
+    cv.drawContours(frame, contours, contourIdx=-1, color=(0, 255, 0), thickness=2, lineType=cv.LINE_AA)
+    cv.imshow('frame', frame)
 
     for contour in contours:
         min_contour_area = 40 # Passen Sie diesen Wert an
         if cv.contourArea(contour) > min_contour_area:
+            x = y = w = h = None
             x, y, w, h = cv.boundingRect(contour)
-            objects.append((x, y, w, h))
+            if all(coord is not None for coord in (x, y, w, h)):
+                objects.append((x, y, w, h))
     
     return objects
 
+previous_frame = None
+
+cap = cv.VideoCapture(0)
+cap.set(3, 1280)
+cap.set(cv.CAP_PROP_AUTOFOCUS, 0)
+
+if not cap.isOpened():
+    print("Cannot open camera")
+    exit(1)
 
 while True:
-    frameAvailable, frame = capture.read()
+    ret, frame = cap.read()
 
-    if not frameAvailable:
-        print(f"no frame availabe", file = sys.stderr)
+    if not ret:
+        print("No frame available")
         break
+    
+    current_frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
-    obj = getContours(frame)
+    
+    cv.imshow('frame', frame)
+    objects = getContours(frame)
+    if objects is not None:
+        detection(frame, objects[0])
 
-    for ob in obj:
-        x,y,w,h = ob
+    previous_frame = current_frame_gray
 
-    roi = frame[y:y+h, x:x+w]
 
-    prediction = detection(roi)
-    print(prediction)
-
-    class_id = np.argmax(prediction)
-    text = labels[class_id]
-
- #   cv.rectangle(image, (int(xmin), int(ymin)), (int(xmax), int(ymax)), (0, 255, 0), 2)
-    cv.putText(frame, text, (10, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-    cv.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-    cv.imshow('Object Detection', frame)
     key = cv.waitKey(5)
     
     if key == ord("q"):
         break
     elif key == ord("s"):
-        break
+        break        
 
-capture.release()
-cv.waitKey(0)
+cap.release()
 cv.destroyAllWindows()

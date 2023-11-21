@@ -1,5 +1,0 @@
-0 2x4 orange lego
-1 2x3 green lego
-2 4x4 blue lego
-3 2x3 blue lego
-4 2x4 brown lego
