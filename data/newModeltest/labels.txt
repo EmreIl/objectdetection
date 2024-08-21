@@ -1,2 +1,0 @@
-0 2x3 green
-1 2x3 blue

@@ -1,0 +1,8 @@
+0 2x3 green
+1 2x3 blue
+2 2x6 orange
+3 2x6 blue 
+4 4x6 brown
+5 4x6 black
+6 2x12 orange
+7 2x12 black
